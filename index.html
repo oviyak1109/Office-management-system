@@ -1,0 +1,503 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Office Management System</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="messages">
+{% for category,message in messages %}
+<div class="message {{ category }}">{{ message }}</div>
+{% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+{% if page == "login" %}
+<section class="login-page">
+<div class="login-card">
+<div class="logo">OMS</div>
+<h1>Office Management System</h1>
+<p>Login to access your account.</p>
+<form method="POST" action="{{ url_for('home') }}">
+<label>Login ID</label>
+<input type="text" name="login_id" placeholder="Enter your login ID" required>
+<label>Password</label>
+<input type="password" name="password" placeholder="Enter your password" required>
+<button type="submit" class="primary-btn">Login</button>
+</form>
+<p class="login-note">Office Management System</p>
+</div>
+</section>
+{% else %}
+<div class="layout">
+<aside class="sidebar">
+<div class="brand">
+<div class="logo small-logo">OMS</div>
+<h2>Office System</h2>
+</div>
+<div class="user-info">
+<h3>{{ session.full_name }}</h3>
+<p>{{ session.role|capitalize }}</p>
+<small>{{ session.login_id }}</small>
+</div>
+<nav>
+<a href="{{ url_for('dashboard') }}">Dashboard</a>
+<a href="{{ url_for('logout') }}">Logout</a>
+</nav>
+</aside>
+<main class="main-content">
+<header class="topbar">
+<div>
+<h1>
+{% if role == "student" %}Student Dashboard
+{% elif role == "teacher" %}Teacher Dashboard
+{% elif role == "hr" %}HR Dashboard
+{% else %}Administrator Dashboard{% endif %}
+</h1>
+<h2>Welcome back, {{ session.full_name }}</h2>
+</div>
+<a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+</header>
+{% if role == "student" %}
+<section class="welcome-card">
+<h2>Welcome, {{ session.full_name }}!</h2>
+</section>
+<section class="section">
+<div class="section-heading"><h2>My Class Timetable</h2></div>
+<div class="table-container">
+<table>
+<thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Teacher</th><th>Teacher ID</th><th>Classroom</th></tr></thead>
+<tbody>
+{% for item in schedules %}
+<tr>
+<td>{{ item.class_day }}</td>
+<td>{{ item.start_time }} - {{ item.end_time }}</td>
+<td>{{ item.subject }}</td>
+<td>{{ item.teacher_name }}</td>
+<td>{{ item.teacher_login_id }}</td>
+<td>{{ item.classroom or "-" }}</td>
+</tr>
+{% else %}
+<tr><td colspan="6">No class timetable has been assigned yet.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+<section class="section">
+<div class="section-heading"><h2>Available Job Openings</h2></div>
+<div class="job-grid">
+{% for job in jobs %}
+<article class="job-card">
+<span class="job-tag">Open Position</span>
+<h3>{{ job.title }}</h3>
+<p class="department">{{ job.department or "General" }}</p>
+<p>{{ job.description }}</p>
+<div class="skills"><strong>Required Skills</strong><p>{{ job.required_skills }}</p></div>
+<form method="POST" action="{{ url_for('apply_job',job_id=job.job_id) }}" enctype="multipart/form-data">
+<label>Upload Resume (PDF)</label>
+<input type="file" name="resume" accept=".pdf,application/pdf" required>
+<small>PDF only.</small>
+<button type="submit" class="primary-btn">Apply Now</button>
+</form>
+</article>
+{% else %}
+<div class="empty-state"><h3>No jobs available</h3><p>Please check again later.</p></div>
+{% endfor %}
+</div>
+</section>
+<section class="section">
+<h2>My Job Applications</h2>
+<div class="table-container">
+<table>
+<thead><tr><th>Job</th><th>Match Score</th><th>Matched Skills</th><th>Missing Skills</th><th>Status</th><th>Resume</th></tr></thead>
+<tbody>
+{% for application in applications %}
+<tr>
+<td>{{ application.job_title }}</td>
+<td><strong>{{ application.match_score }}%</strong></td>
+<td>{{ application.matched_skills or "None" }}</td>
+<td>{{ application.missing_skills or "None" }}</td>
+<td><span class="status">{{ application.status }}</span></td>
+<td><a href="{{ url_for('resume_file',application_id=application.application_id) }}">Download</a></td>
+</tr>
+{% else %}
+<tr><td colspan="6">You have not applied for any jobs yet.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+<section class="section">
+<h2>Submit a Complaint</h2>
+<div class="form-card">
+<form method="POST" action="{{ url_for('submit_complaint') }}">
+<label>Subject</label>
+<input type="text" name="subject" placeholder="Enter complaint subject" required>
+<label>Message</label>
+<textarea name="message" rows="4" placeholder="Describe your concern" required></textarea>
+<button type="submit" class="primary-btn">Submit Complaint</button>
+</form>
+</div>
+</section>
+<section class="section">
+<h2>My Complaints</h2>
+<div class="table-container">
+<table>
+<thead><tr><th>Subject</th><th>Message</th><th>Status</th></tr></thead>
+<tbody>
+{% for complaint in complaints %}
+<tr><td>{{ complaint.subject }}</td><td>{{ complaint.message }}</td><td>{{ complaint.status }}</td></tr>
+{% else %}
+<tr><td colspan="3">No complaints submitted.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+{% elif role == "teacher" %}
+<section class="welcome-card"><h2>Welcome, {{ session.full_name }}!</h2></section>
+<section class="section">
+<h2>Teacher Profile</h2>
+<div class="profile-card">
+<p><strong>Name:</strong> {{ session.full_name }}</p>
+<p><strong>Login ID:</strong> {{ session.login_id }}</p>
+<p><strong>Department:</strong> {{ session.department or "Not assigned" }}</p>
+</div>
+</section>
+<section class="section">
+<div class="section-heading"><h2>My Assigned Students</h2></div>
+<div class="table-container">
+<table>
+<thead><tr><th>Student ID</th><th>Name</th><th>Email</th><th>Department</th></tr></thead>
+<tbody>
+{% for student in users %}
+<tr>
+<td>{{ student.login_id }}</td>
+<td>{{ student.full_name }}</td>
+<td>{{ student.email }}</td>
+<td>{{ student.department or "-" }}</td>
+</tr>
+{% else %}
+<tr><td colspan="4">No students have been assigned to you yet.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+<section class="section">
+<h2>My Class Timetable</h2>
+<div class="table-container">
+<table>
+<thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Classroom</th></tr></thead>
+<tbody>
+{% for item in schedules %}
+<tr>
+<td>{{ item.class_day }}</td>
+<td>{{ item.start_time }} - {{ item.end_time }}</td>
+<td>{{ item.subject }}</td>
+<td>{{ item.classroom or "-" }}</td>
+</tr>
+{% else %}
+<tr><td colspan="4">No timetable has been assigned to you yet.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+<section class="section">
+<h2>Job Openings</h2>
+<div class="job-grid">
+{% for job in jobs %}
+<article class="job-card">
+<span class="job-tag">Open Position</span>
+<h3>{{ job.title }}</h3>
+<p class="department">{{ job.department or "General" }}</p>
+<p>{{ job.description }}</p>
+<div class="skills"><strong>Required Skills</strong><p>{{ job.required_skills }}</p></div>
+</article>
+{% else %}
+<div class="empty-state">No job openings available.</div>
+{% endfor %}
+</div>
+</section>
+<section class="section">
+<h2>Job Applicants</h2>
+<div class="table-container">
+<table>
+<thead><tr><th>Student Name</th><th>Student ID</th><th>Job</th><th>Applied Date</th></tr></thead>
+<tbody>
+{% for application in teacher_applications %}
+<tr>
+<td>{{ application.full_name }}</td>
+<td>{{ application.login_id }}</td>
+<td>{{ application.job_title }}</td>
+<td>{{ application.applied_at }}</td>
+</tr>
+{% else %}
+<tr><td colspan="4">No job applications found.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+{% elif role == "hr" %}
+<section class="welcome-card"><h2>HR Management</h2></section>
+<section class="section">
+<h2>Create Job Opening</h2>
+<div class="form-card">
+<form method="POST" action="{{ url_for('add_job') }}">
+<label>Job Title</label>
+<input type="text" name="title" required>
+<label>Department</label>
+<input type="text" name="department" placeholder="Example: IT">
+<label>Job Description</label>
+<textarea name="description" rows="4" placeholder="Enter job description" required></textarea>
+<label>Required Skills</label>
+<input type="text" name="required_skills" placeholder="Machine Learning" required>
+<button type="submit" class="primary-btn">Publish Job</button>
+</form>
+</div>
+</section>
+<section class="section">
+<h2>Job Openings</h2>
+<div class="job-grid">
+{% for job in jobs %}
+<article class="job-card">
+<h3>{{ job.title }}</h3>
+<p class="department">{{ job.department or "General" }}</p>
+<p>{{ job.description }}</p>
+<div class="skills"><strong>Required Skills</strong><p>{{ job.required_skills }}</p></div>
+<span class="status">{% if job.is_active %}Active{% else %}Closed{% endif %}</span>
+<form method="POST" action="{{ url_for('delete_job', job_id=job.job_id) }}">
+<button type="submit" class="small-btn">Remove Job</button>
+</form>
+</article>
+{% else %}
+<div class="empty-state">No job openings created yet.</div>
+{% endfor %}
+</div>
+</section>
+<section class="section">
+<h2>Assign Teacher and Student</h2>
+<div class="form-card">
+<form method="POST" action="{{ url_for('add_assignment') }}">
+<label>Select Teacher</label>
+<select name="teacher_id" required>
+<option value="">Select Teacher</option>
+{% for teacher in teachers %}
+<option value="{{ teacher.user_id }}">{{ teacher.full_name }} ({{ teacher.login_id }})</option>
+{% endfor %}
+</select>
+<label>Select Students</label>
+<select name="student_ids" multiple required class="multi-select">
+{% for student in students %}
+<option value="{{ student.user_id }}">{{ student.full_name }} ({{ student.login_id }})</option>
+{% endfor %}
+</select>
+<label>Subject</label>
+<input type="text" name="subject" placeholder="Example: Python" required>
+<label>Class Day</label>
+<select name="class_day" required>
+<option value="">Select Day</option>
+<option>Monday</option>
+<option>Tuesday</option>
+<option>Wednesday</option>
+<option>Thursday</option>
+<option>Friday</option>
+<option>Saturday</option>
+<option>Sunday</option>
+</select>
+<label>Start Time</label>
+<input type="time" name="start_time" required>
+<label>End Time</label>
+<input type="time" name="end_time" required>
+<label>Classroom</label>
+<input type="text" name="classroom" placeholder="Example: Room 204">
+<button type="submit" class="primary-btn">Assign and Save Timetable</button>
+</form>
+</div>
+</section>
+<section class="section">
+<h2>Teacher Assignments and Timetables</h2>
+<div class="table-container">
+<table>
+<thead><tr><th>Teacher</th><th>Teacher ID</th><th>Student</th><th>Student ID</th><th>Subject</th><th>Day</th><th>Time</th><th>Room</th><th>Action</th></tr></thead>
+<tbody>
+{% for item in assignments %}
+<tr>
+<td>{{ item.teacher_name }}</td>
+<td>{{ item.teacher_login_id }}</td>
+<td>{{ item.student_name }}</td>
+<td>{{ item.student_login_id }}</td>
+<td>{{ item.subject }}</td>
+<td>{{ item.class_day or "-" }}</td>
+<td>{% if item.start_time %}{{ item.start_time }} - {{ item.end_time }}{% else %}-{% endif %}</td>
+<td>{{ item.classroom or "-" }}</td>
+<td>
+<form method="POST" action="{{ url_for('delete_assignment',assignment_id=item.assignment_id) }}" onsubmit="return confirm('Remove this teacher assignment and its timetable?');">
+<button type="submit" class="small-btn danger-btn">Remove</button>
+</form>
+</td>
+</tr>
+{% else %}
+<tr><td colspan="9">No teacher assignments created yet.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+<section class="section">
+<h2>Candidates resumes</h2>
+<div class="table-container">
+<table>
+<thead><tr><th>Student</th><th>Login ID</th><th>Department</th><th>Job</th><th>Match Score</th><th>Text Similarity</th><th>Matched Skills</th><th>Missing Skills</th><th>Resume</th><th>Status</th><th>Action</th></tr></thead>
+<tbody>
+{% for application in applications %}
+<tr>
+<td>{{ application.full_name }}</td>
+<td>{{ application.login_id }}</td>
+<td>{{ application.department or "-" }}</td>
+<td>{{ application.job_title }}</td>
+<td><strong>{{ application.match_score }}%</strong></td>
+<td>{{ application.text_similarity }}%</td>
+<td>{{ application.matched_skills or "None" }}</td>
+<td>{{ application.missing_skills or "None" }}</td>
+<td><a href="{{ url_for('resume_file',application_id=application.application_id) }}">Download PDF</a></td>
+<td>
+<form method="POST" action="{{ url_for('update_application',application_id=application.application_id) }}">
+<select name="status">
+<option value="Pending" {% if application.status=="Pending" %}selected{% endif %}>Pending</option>
+<option value="Shortlisted" {% if application.status=="Shortlisted" %}selected{% endif %}>Shortlisted</option>
+<option value="Rejected" {% if application.status=="Rejected" %}selected{% endif %}>Rejected</option>
+</select>
+<button type="submit" class="small-btn">Update</button>
+</form>
+</td>
+<td>
+{% if application.status == "Rejected" %}
+<form method="POST" action="{{ url_for('delete_application',application_id=application.application_id) }}">
+<button type="submit" class="small-btn danger-btn">Remove</button>
+</form>
+{% else %}
+-
+{% endif %}
+</td>
+</tr>
+{% else %}
+<tr><td colspan="11">No applications received.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+<section class="section">
+<h2>Student Complaints</h2>
+<div class="table-container">
+<table>
+<thead><tr><th>Student</th><th>Login ID</th><th>Subject</th><th>Message</th><th>Status</th></tr></thead>
+<tbody>
+{% for complaint in complaints %}
+<tr>
+<td>{{ complaint.full_name }}</td>
+<td>{{ complaint.login_id }}</td>
+<td>{{ complaint.subject }}</td>
+<td>{{ complaint.message }}</td>
+<td>
+<form method="POST" action="{{ url_for('update_complaint',complaint_id=complaint.complaint_id) }}">
+<select name="status">
+<option value="Pending" {% if complaint.status=="Pending" %}selected{% endif %}>Pending</option>
+<option value="In Progress" {% if complaint.status=="In Progress" %}selected{% endif %}>In Progress</option>
+<option value="Resolved" {% if complaint.status=="Resolved" %}selected{% endif %}>Resolved</option>
+</select>
+<button type="submit" class="small-btn">Update</button>
+</form>
+</td>
+</tr>
+{% else %}
+<tr><td colspan="5">No complaints received.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+{% elif role == "admin" %}
+<div class="dashboard-header"><h2>System Administration</h2></div>
+<div class="card">
+<h3>Create New Entry</h3>
+<form action="{{ url_for('add_user') }}" method="POST">
+<label>Login ID</label>
+<input type="text" name="login_id" required>
+<label>Full Name</label>
+<input type="text" name="full_name" required>
+<label>Email</label>
+<input type="email" name="email">
+<label>Password</label>
+<input type="password" name="password" required>
+<label>Role</label>
+<select name="role" required>
+<option value="student">Student</option>
+<option value="teacher">Teacher</option>
+</select>
+<label>Department</label>
+<input type="text" name="department">
+<button type="submit">Create Account</button>
+</form>
+</div>
+<div class="card">
+<h3>User Management</h3>
+<form action="{{ url_for('dashboard') }}" method="GET">
+<label>Enter Login ID</label>
+<div class="search-row">
+<input type="text" name="search_id" placeholder="Example: STU001 or TCH001" value="{{ request.args.get('search_id','') }}" required>
+<button type="submit">Search</button>
+</div>
+</form>
+{% if request.args.get('search_id') %}
+{% if users %}
+{% for user in users %}
+<div class="user-details">
+<h3>User Details</h3>
+<form action="{{ url_for('edit_user',user_id=user.user_id) }}" method="POST">
+<input type="hidden" name="login_id" value="{{ user.login_id }}">
+<label>Login ID</label>
+<input type="text" value="{{ user.login_id }}" readonly>
+<label>Full Name</label>
+<input type="text" name="full_name" value="{{ user.full_name }}" required>
+<label>Email</label>
+<input type="email" name="email" value="{{ user.email or '' }}">
+<label>Role</label>
+<input type="text" value="{{ user.role }}" readonly>
+<label>Department</label>
+<input type="text" name="department" value="{{ user.department or '' }}">
+<label>Account Status</label>
+<input type="text" value="{{ 'Active' if user.is_active else 'Inactive' }}" readonly>
+{% if user.role in ['student','teacher'] %}
+<button type="submit">Update Details</button>
+{% endif %}
+</form>
+{% if user.role in ['student','teacher'] %}
+<form action="{{ url_for('delete_user',user_id=user.user_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this account?');">
+<button type="submit" class="delete-btn">Delete Account</button>
+</form>
+{% else %}
+<p>Protected Account</p>
+{% endif %}
+</div>
+{% endfor %}
+{% else %}
+<p>No user found with this Login ID.</p>
+{% endif %}
+{% endif %}
+</div>
+{% endif %}
+</main>
+</div>
+{% endif %}
+</body>
+</html>
